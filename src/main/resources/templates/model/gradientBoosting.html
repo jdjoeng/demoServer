@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/defaultLayout}">
+<div layout:fragment="content">
+    <div>
+        <div class="chart-top-desciption">
+            <h4>Gradient Boosting</h4>
+            <ul>
+                <li>Gradient Boosting : 약한 학습자들을 여러개 결합하여 성능을 높이는 알고리즘의 하나로 잔차(에러)를 줄이는 방향으로 결합하여 loss를 줄여나가는 알고리즘입니다.</li>
+            </ul>
+            <p>
+                <span style="color: orangered">※ 리스트를 클릭하면 상세정보를 확인할수 있습니다.</span>
+            </p>
+        </div>
+        <p style="font-size:20px;">상품별 수요예측</p>
+        <div id="grid"></div><br>
+        <div id="infoArea" style="width: 99%">
+            <div id="columnChartArea"></div>
+        </div>
+        <div id="dtlArea">
+            <div style="margin-bottom: 20px;">
+                <button id="btnLineScatter" type="button" class="btn btn-primary">LineScatter</button>
+                <button id="btnLineArea" type="button" class="btn btn-primary">LineArea</button>
+                <button id="btnColumnLine" type="button" class="btn btn-primary">ColumnLine</button>
+            </div>
+            <table id="dtlGrid" class="table table-bordered text-center" style="background-color: white;">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+            <div style="width: 99%">
+                <div id="chart-area"></div>
+            </div>
+        </div>
+        <!--<p id="subGridTitle" style="display:none;font-size:20px;">일자별 수요예측</p>-->
+        <!--<div id="sub-grid"></div><br>-->
+    </div>
+    <script>
+        const infoType = '2';
+
+        $( document ).ready(function() {
+            ajaxCallGet("/demandForecasting/api/getResultList", {type : infoType}, init);
+        });
+
+        function init(respData) {
+            var gridData = respData.data;
+
+            console.log(gridData)
+
+            var grid = new tui.Grid({
+                el: document.getElementById('grid'),
+                data: gridData,
+                scrollX: false,
+                scrollY: true,
+                bodyHeight: 210,
+                minBodyHeight : 20,
+                columns: [
+                    {header: 'id',name: 'id', align: 'center', hidden:true},
+                    {header: '상품명',name: 'name', align: 'center'},
+                    {header: '실제 판매량',name: 'item_qty', align: 'center'},
+                    {header: '최대 예측량',name: 'q90', align: 'center'},
+                    {header: '중간 예측량',name: 'q50', align: 'center'},
+                    {header: '최소 예측량',name: 'q10', align: 'center'},
+                ],
+            });
+
+            $('#dtlArea').hide();
+            renderColumnChart(gridData);
+
+            let detailName;
+            grid.on('click', function (ev) {
+                let id = grid.getRow(ev.rowKey).id;
+                detailName = grid.getRow(ev.rowKey).name;
+                let param = {id:id, type:infoType};
+
+                ajaxCallGet("/demandForecasting/api/getResultListById", param, function(response, xhr){
+                    $('#infoArea').hide();
+                    $('#dtlArea').show();
+
+                    let responseData = response.data;
+
+                    renderGrid(responseData);
+
+                    gridData = responseData;
+                    renderLineScatterChart(responseData, detailName);
+                    $(document).scrollTop($(document).height());
+                });
+            });
+
+            $('#btnLineScatter').click(function(){
+                renderLineScatterChart(gridData, detailName);
+                $(document).scrollTop($(document).height());
+            });
+            $('#btnLineArea').click(function(){
+                renderLineAreaChart(gridData, detailName);
+                $(document).scrollTop($(document).height());
+            });
+            $('#btnColumnLine').click(function(){
+                renderColumnLineChart(gridData, detailName);
+                $(document).scrollTop($(document).height());
+            });
+
+        }
+
+        function renderColumnChart(gridData) {
+
+            let qtyArr = new Array();
+            let ctgrArr = new Array();
+
+            for(var i=0; i<gridData.length; i++) {
+                ctgrArr.push(gridData[i].name);
+                qtyArr.push(gridData[i].item_qty);
+            }
+
+            const el = document.getElementById('columnChartArea');
+            const data = {
+                categories: ctgrArr,
+                series: [
+                    {
+                        name: 'Budget',
+                        data: qtyArr,
+                    },
+                ],
+            };
+            const options = {
+                chart: { title: '', height: 400 },
+                legend: {visible:false}
+            };
+
+            const chart = toastui.Chart.columnChart({ el, data, options });
+        }
+
+        function renderLineScatterChart(gridData, title) {
+
+            $("#chart-area").empty();
+
+            let qtyArr = new Array();
+            let q10Arr = new Array();
+            let q50Arr = new Array();
+            let q90Arr = new Array();
+            for(var i=0; i<gridData.length; i++) {
+                var qtyObj = new Object();
+                var q10Obj = new Object();
+                var q50Obj = new Object();
+                var q90Obj = new Object();
+
+                qtyObj.x = i+1;
+                q10Obj.x = i+1;
+                q50Obj.x = i+1;
+                q90Obj.x = i+1;
+
+                qtyObj.y = parseFloat(gridData[i].item_qty);
+                q10Obj.y = parseFloat(gridData[i].q10);
+                q50Obj.y = parseFloat(gridData[i].q50);
+                q90Obj.y = parseFloat(gridData[i].q90);
+
+                qtyArr.push(qtyObj);
+                q10Arr.push(q10Obj);
+                q50Arr.push(q50Obj);
+                q90Arr.push(q90Obj);
+            }
+
+            const el = document.getElementById('chart-area');
+            const data = {
+                series: {
+                    scatter: [
+                        {
+                            name: '실제판매',
+                            data: qtyArr,
+                        },
+                    ],
+                    line: [
+                        {
+                            name: '최대 예측량',
+                            data: q90Arr,
+                        },
+                        {
+                            name: '중간 예측량',
+                            data: q50Arr,
+                        },
+                        {
+                            name: '최소 예측량',
+                            data: q10Arr,
+                        },
+                    ],
+                },
+            };
+            const options = {
+                chart: { title: title, height: 400 },
+                xAxis: { title: '일자' },
+                yAxis: { title: '판매량' },
+                legend: { visible : false },
+            };
+
+            const chart = toastui.Chart.lineScatterChart({ el, data, options });
+        }
+
+        function renderLineAreaChart(gridData, title) {
+
+            $("#chart-area").empty();
+
+            let qtyArr = new Array();
+            let q10Arr = new Array();
+            let q50Arr = new Array();
+            let q90Arr = new Array();
+            let ctgrArr = new Array();
+
+            for(var i=0; i<gridData.length; i++) {
+                ctgrArr.push(gridData[i].date);
+                qtyArr.push(gridData[i].item_qty);
+                q10Arr.push(gridData[i].q10);
+                q50Arr.push(gridData[i].q50);
+                q90Arr.push(gridData[i].q90);
+            }
+
+            const el = document.getElementById('chart-area');
+            const data = {
+                categories: ctgrArr,
+                series: {
+                    area: [
+                        {
+                            name: '실제판매',
+                            data: qtyArr,
+                        },
+                    ],
+                    line: [
+                        {
+                            name: '최대 예측량',
+                            data: q90Arr,
+                        },
+                        {
+                            name: '중간 예측량',
+                            data: q50Arr,
+                        },
+                        {
+                            name: '최소 예측량',
+                            data: q10Arr,
+                        },
+                    ],
+                },
+            };
+            const options = {
+                chart: { title: title, height: 400 },
+                xAxis: {
+                    title: '일자',
+                },
+                yAxis: {
+                    title: '판매량',
+                },
+                legend: { visible : false },
+            };
+
+            const chart = toastui.Chart.lineAreaChart({ el, data, options });
+        }
+
+        function renderColumnLineChart(gridData, title) {
+
+            $("#chart-area").empty();
+
+            let qtyArr = new Array();
+            let q10Arr = new Array();
+            let q50Arr = new Array();
+            let q90Arr = new Array();
+            let ctgrArr = new Array();
+
+            for(var i=0; i<gridData.length; i++) {
+                ctgrArr.push(gridData[i].date);
+                qtyArr.push(gridData[i].item_qty);
+                q10Arr.push(gridData[i].q10);
+                q50Arr.push(gridData[i].q50);
+                q90Arr.push(gridData[i].q90);
+            }
+
+            const el = document.getElementById('chart-area');
+            const data = {
+                categories: ctgrArr,
+                series: {
+                    line: [
+                        {
+                            name: '최대 예측량',
+                            data: q90Arr,
+                        },
+                        {
+                            name: '중간 예측량',
+                            data: q50Arr,
+                        },
+                        {
+                            name: '최소 예측량',
+                            data: q10Arr,
+                        },
+                    ],
+                    column: [
+                        {
+                            name: '실제판매',
+                            data: qtyArr,
+                        },
+                    ],
+                },
+            };
+            const options = {
+                chart: { title: title, height: 400 },
+                yAxis: { title: '판매량' },
+                xAxis: { title: '일자'},
+                legend: { visible : false },
+            };
+            const chart = toastui.Chart.columnLineChart({ el, data, options });
+        }
+
+        function renderGrid(gridData) {
+            $('#dtlGrid thead').empty();
+            $('#dtlGrid thead').append('<tr><th scope="col">구분&#92;날짜</th></tr>');
+
+            $('#dtlGrid tbody').empty();
+            $('#dtlGrid tbody').append('<tr><td>실제판매량</td></tr><tr><td>최대예측량</td></tr><tr><td>중간예측량</td></tr><tr><td>최소예측량</td></tr>')
+
+            for(let i=0; i<15; i++) {
+                let colText = (gridData[i].date).substr(5);
+                $('#dtlGrid thead tr').append('<th scope="col">'+colText+'</th>');
+                $('#dtlGrid tbody tr').eq(0).append('<td>'+gridData[i].item_qty+'</td>');
+                $('#dtlGrid tbody tr').eq(1).append('<td>'+(gridData[i].q90).toFixed(2)+'</td>');
+                $('#dtlGrid tbody tr').eq(2).append('<td>'+(gridData[i].q50).toFixed(2)+'</td>');
+                $('#dtlGrid tbody tr').eq(3).append('<td>'+(gridData[i].q10).toFixed(2)+'</td>');
+            }
+        }
+    </script>
+    <style>
+        .table td{height: 40px;}
+    </style>
+</div>
+</html>

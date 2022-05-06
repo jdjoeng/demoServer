@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/defaultLayout}">
+<div layout:fragment="content">
+    <div>
+        <div style="background-color: white; padding: 20px 20px 5px 20px; margin-bottom: 20px;">
+            <h4>DeepAR+ Quantile Regression</h4>
+            <ul>
+                <li>DeepAR+ : 자기회귀모형(autoregressive)을 기반으로 한 반복신경망(RNN)을 알고리즘으로 1차원의 대규모 시계열 패턴을 예측합니다.</li>
+                <li>Quantile Regression(분위수 회귀 분석) : 조건부 분위수를 지정하여 회귀 분석하는 알고리즘으로, 평균절대오차(MAE)가 최소화된 모형을 만듭니다.</li>
+            </ul>
+            <p>
+                <span style="color: orangered">※ 단어를 클릭하면 상세정보를 확인할수 있습니다.</span>
+            </p>
+        </div>
+        <p style="font-size:20px;">상품별 수요예측</p>
+        <div id="word_cloud" class="word_cloud" style="width: 100%; height: 300px; margin-bottom: 20px;"></div>
+        <!--<table id="mainTbl" style="width: 100%;">
+            <tr>
+                <td style="width: 40%"><div id="columnChart" style="padding-right: 10px"></div></td>
+                <td style="width: 30%"><div id="barChart2" style="padding-right: 10px"></div></td>
+                <td style="width: 30%"><div id="pieChart2"></div></td>
+            </tr>
+        </table>-->
+        <div id="dtlBtnDiv" style="margin-bottom: 20px; display: none;">
+            <button id="btnInfo" type="button" class="btn btn-primary">상품정보</button>
+            <button id="btnForecast" type="button" class="btn btn-primary">수요예측</button>
+        </div>
+        <table id="dtlTbl" style="width: 100%;">
+            <tr>
+                <td style="width: 40%"><div id="areaChart" style="padding-right: 10px"></div></td>
+                <td style="width: 30%"><div id="barChart" style="padding-right: 10px"></div></td>
+                <td style="width: 30%"><div id="pieChart" data-item=""></div></td>
+            </tr>
+            <tr>
+                <td colspan="3"><div id="chart-area"></div></td>
+            </tr>
+        </table>
+
+        <!-- Button trigger modal -->
+        <!--<button type="button" class="btn btn-primary" data-target="#exampleModal">
+            Launch demo modal
+        </button>-->
+    </div>
+    <script>
+        const infoType = '1';
+        let itemInfo;
+        let itemName;
+
+        $( document ).ready(function() {
+            ajaxCallGet("/demandForecasting/api/getResultList", {type : infoType}, init);
+        });
+
+        function init(respData) {
+            var cloudData = respData.data;
+
+            let cList = [];
+            for (var i in cloudData) {
+                let qty = parseInt(cloudData[i].item_qty);
+                cList.push([cloudData[i].name, (parseInt(qty)*parseInt(qty))/1700]);
+            }
+
+            var attempt = WordCloud(document.getElementById('word_cloud'), {
+                list: cList,
+                fontFamily: 'Times, serif',
+                backgroundColor: '#fff',
+                click: function(item, l, p) {
+                    ajaxCallGet("/demandForecasting/api/getResultListByIdName", {type : infoType, name : item[0]}, function(response, xhr){
+                        $('#mainTbl').hide();
+                        $('#dtlBtnDiv').show();
+                        itemInfo = response.data.info;
+                        itemName = item[0];
+
+                        $('#dtlTbl tr').eq(0).show();
+                        renderAreaChart(response.data, item[0]);
+                        renderPieChart(response.data, item[0]);
+                        renderBarChart(response.data, item[0]);
+                        $('#data-item').attr('data-item', item[0]);
+
+                        $('#dtlTbl tr').eq(1).show();
+                        renderChart(response.data.info, item[0], 'chart-area');
+                        $('#dtlTbl tr').eq(1).hide();
+                    });
+                },
+            } );
+
+            $('#btnInfo').click(function (){
+                $('#dtlTbl tr').eq(1).hide();
+                $('#dtlTbl tr').eq(0).show();
+            });
+
+            $('#btnForecast').click(function (){
+                $('#dtlTbl tr').eq(0).hide();
+                $('#dtlTbl tr').eq(1).show();
+                //renderChart(itemInfo, itemName, 'chart-area');
+            });
+
+        }
+
+        function renderAreaChart(gridData, title) {
+            $('#areaChart').empty();
+
+            let gData = gridData.info;
+
+            let ctgrArr = new Array();
+            let dataArr = new Array();
+            for(let i=0; i<gData.length; i++) {
+                ctgrArr.push(gData[i].date);
+                dataArr.push(gData[i].item_qty);
+            }
+
+            const el = document.getElementById('areaChart');
+            const data = {
+                categories: ctgrArr,
+                series: [
+                    {
+                        name: title,
+                        data: dataArr,
+                    },
+                ],
+            };
+            const options = {
+                chart: { title: title + ' [일자별 판매량]', height: 300 },
+                xAxis: { pointOnColumn: false, title: { text: '일자' } },
+                yAxis: { title: '판매수' },
+                legend: {visible: false},
+            };
+
+            const chart = toastui.Chart.areaChart({ el, data, options });
+        }
+
+        function renderPieChart(gridData, title) {
+            $('#pieChart').empty();
+
+            let gData = gridData.ordr;
+
+            let dataArr = new Array();
+            for(let i=0; i<7; i++) {
+                let temp = new Object();
+                temp.name = gData[i].date;
+                temp.data = gData[i].item_qty;
+
+                dataArr.push(temp);
+            }
+
+            const el = document.getElementById('pieChart');
+            const data = {
+                categories: ['Browser'],
+                series: dataArr
+            };
+
+            const options = {
+                chart: { title: title + ' [SALES TOP 7]', height: 300 },
+                series: {
+                    clockwise: false,
+                    radiusRange: {
+                        inner: '50%',
+                        outer: '90%',
+                    },
+                    dataLabels: {
+                        visible: true,
+                        anchor: 'outer',
+                    },
+                },
+            };
+
+            const chart = toastui.Chart.pieChart({ el, data, options });
+        }
+
+        function renderBarChart(gridData, title) {
+            $('#barChart').empty();
+
+            let gData = gridData.ordr;
+
+            let dataArr = new Array();
+            let ctgrArr = new Array();
+            for(let i=0; i<7; i++) {
+                dataArr.push(gData[i].item_qty);
+                ctgrArr.push(gData[i].date);
+            }
+
+            const el = document.getElementById('barChart');
+            const data = {
+                categories: ctgrArr,
+                series: [
+                    {
+                        name: 'Budget',
+                        data: dataArr
+                    },
+                ],
+            };
+            const options = {
+                chart: { title: title + ' [SALES TOP 7]', height: 300 },
+                legend: {visible: false},
+                series: {
+                    dataLabels: { visible: true }
+                },
+                theme: {
+                    series: {
+                        dataLabels: {
+                            lineWidth: 2,
+                            textStrokeColor: '#ffffff',
+                            shadowColor: '#ffffff',
+                            shadowBlur: 4,
+                        }
+                    }
+                }
+            };
+
+            const chart = toastui.Chart.barChart({ el, data, options });
+        }
+
+        function renderChart(gridData, title, target) {
+
+            $('#'+target).empty();
+
+            let qtyArr = new Array();
+            let q10Arr = new Array();
+            let q50Arr = new Array();
+            let q90Arr = new Array();
+            for(var i=0; i<gridData.length; i++) {
+                var qtyObj = new Object();
+                var q10Obj = new Object();
+                var q50Obj = new Object();
+                var q90Obj = new Object();
+
+                qtyObj.x = i+1;
+                q10Obj.x = i+1;
+                q50Obj.x = i+1;
+                q90Obj.x = i+1;
+
+                qtyObj.y = parseFloat(gridData[i].item_qty);
+                q10Obj.y = parseFloat(gridData[i].q10);
+                q50Obj.y = parseFloat(gridData[i].q50);
+                q90Obj.y = parseFloat(gridData[i].q90);
+
+                qtyArr.push(qtyObj);
+                q10Arr.push(q10Obj);
+                q50Arr.push(q50Obj);
+                q90Arr.push(q90Obj);
+            }
+
+            const el = document.getElementById(target);
+            const data = {
+                series: {
+                    scatter: [
+                        {
+                            name: '실제 판매량',
+                            data: qtyArr,
+                        },
+                    ],
+                    line: [
+                        {
+                            name: 'Q0.9',
+                            data: q90Arr,
+                        },
+                        {
+                            name: 'Q0.5',
+                            data: q50Arr,
+                        },
+                        {
+                            name: 'Q0.1',
+                            data: q10Arr,
+                        },
+                    ],
+                },
+            };
+            const options = {
+                chart: { title: title + ' [수요예측]', height: 300 },
+                xAxis: { title: '일자' },
+                yAxis: { title: '판매량' },
+                legend: { visible : false },
+            };
+
+            const chart = toastui.Chart.lineScatterChart({ el, data, options });
+        }
+
+        function renderGrid(gridData, title) {
+
+            $("#sub-grid").empty();
+            $("#subGridTitle").css("display", "");
+            var grid = new tui.Grid({
+                el: document.getElementById('sub-grid'),
+                data: gridData,
+                scrollX: false,
+                scrollY: true,
+                bodyHeight: 320,
+                minBodyHeight : 20,
+                columns: [
+                    {header: '상품명',name: 'name', align: 'center'},
+                    {header: '일자',name: 'date', align: 'center'},
+                    {header: '실제 판매량',name: 'item_qty', align: 'center'},
+                    {header: 'Q0.1',name: 'q10', align: 'center'},
+                    {header: 'Q0.5',name: 'q50', align: 'center'},
+                    {header: 'Q0.9',name: 'q90', align: 'center'},
+                ],
+            });
+
+            renderChart(gridData, title);
+        }
+    </script>
+    <style>
+        /*#forecastModal{top:20%; margin-top: -50px;}*/
+        .word_cloud > span {
+            transition:  0.3s;
+        }
+        .word_cloud > span:hover {
+            color:  #ff8c00 !important;
+            cursor: pointer;
+        }
+    </style>
+</div>
+</html>

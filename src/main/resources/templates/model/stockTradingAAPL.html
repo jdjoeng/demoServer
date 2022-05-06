@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/defaultLayout}">
+<div layout:fragment="content">
+    <div>
+        <div class="chart-top-desciption">
+            <h4>주식 자동거래</h4>
+            <ul>
+                <li>애플(AAPL) 주식을 초기 자본 $1000로 시작해서 최대의 이윤을 얻도록 '강화학습' 알고리즘('DQN알고리즘')을 이용하여 2000-07-01 ~ 2016-07-04의 기간동안 거래한 결과를 보여줍니다.</li>
+                <li>강화학습(RL) : 다음 단계에서 에이전트가 지연된 보상을 받아 이전 행동을 평가하는 일종의 머신러닝 방식을 말한다. 게임(예: 아타리, 마리오)에서 주로 사용되었으며 인간과 동등하거나 그 이상의 성능을 보였다. 최근에는 알고리즘이 신경망의 조합과 함께 발전함에 따라 진자 문제와 같은 보다 복잡한 작업을 해결할 수 있게 되었다.</li>
+                <li>DQN (Deep-Q Network) : Deep Q-Network은 이름에서 알 수 있듯이, state-action value Q값을 Deep Learning을 통해서 Approximate하는 방식이다.</li>
+            </ul>
+        </div>
+        <p style="font-size:20px;">자동거래 결과 <button id="btnStockDetail" type="button" class="btn btn-primary" data-target="#stockDetailModal">상세보기</button></p>
+        <table id="dtlTbl" style="width: 100%;">
+            <tr>
+                <td style="width: 50%"><div id="areaChart"></div></td>
+                <td style="width: 50%"><div id="lineChart" ></div></td>
+            </tr>
+            <tr>
+                <td><div id="stockColumnChart" style="padding-right: 20px"></div></td>
+                <td><div id="portfolioColumnChart" ></div></td>
+            </tr>
+        </table>
+
+        <!-- Modal -->
+        <div class="modal fade" id="stockDetailModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered" role="document" >
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">거래 상세</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="modalBody" width="100%"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const stockName = 'AAPL';
+
+        $( document ).ready(function() {
+            ajaxCallGet("/stockTrading/api/getResultListYear", {name : stockName, year : '2015'}, init);
+        });
+
+        function init(respData) {
+            renderAreaChart(respData.info, stockName + ' [Stock Price]', $('#areaChart'));
+            renderLineChart(respData.info, stockName + ' [Portfolio History]', $('#lineChart'));
+
+            renderStockColumnChart(respData.topStock, stockName + ' [Stock Price TOP 10]', $('#stockColumnChart'));
+            renderPortfolioColumnChart(respData.topPortfolio, stockName + ' [Portfolio History TOP 10]', $('#portfolioColumnChart'));
+
+            $('#btnStockDetail').click(function (){
+                $('#stockDetailModal').modal('show');
+            });
+
+            $('#stockDetailModal').on('shown.bs.modal', function (event) {
+                renderDetailChart(respData.detailInfo, stockName, $('#modalBody'));
+            });
+
+        }
+
+        function renderDetailChart(chartData, title, target) {
+            target.empty();
+
+            let ctgrArr = new Array();
+            let dataPHArr = new Array();
+            let dataSPArr = new Array();
+            for(let i=0; i<chartData.length; i++) {
+                ctgrArr.push(chartData[i].date);
+                dataPHArr.push(chartData[i].portfolio_history);
+                dataSPArr.push(chartData[i].stock_price);
+            }
+
+            const el = target[0];
+            const data = {
+                categories: ctgrArr,
+                series: [
+                    {
+                        name: 'Stock Price',
+                        data: dataSPArr,
+                    },
+                    {
+                        name: 'Portfolio History',
+                        data: dataPHArr,
+                    },
+                ],
+            };
+            const options = {
+                chart: { title: title, height: 300 },
+                xAxis: {
+                    pointOnColumn: false,
+                    title: '일자',
+                },
+                yAxis: {
+                    title: '금액($)',
+                },
+                legend: {align:'bottom'},
+                tooltip: {
+                    formatter: (value) => `$${value}`,
+                },
+            };
+
+            const chart = toastui.Chart.lineChart({ el, data, options });
+        }
+
+        function renderAreaChart(chartData, title, target) {
+            target.empty();
+
+            let ctgrArr = new Array();
+            let dataArr = new Array();
+            for(let i=0; i<chartData.length; i++) {
+                ctgrArr.push(chartData[i].date);
+                dataArr.push(chartData[i].stock_price);
+            }
+
+            const el = target[0];
+            const data = {
+                categories: ctgrArr,
+                series: [
+                    {
+                        name: title,
+                        data: dataArr,
+                    },
+                ],
+            };
+            const options = {
+                chart: { title: title, height: 300 },
+                xAxis: { pointOnColumn: false, title: { text: '일자' } },
+                yAxis: { title: '금액($)' },
+                legend: {visible: false},
+                tooltip: {
+                    formatter: (value) => `$${value}`,
+                },
+            };
+
+            const chart = toastui.Chart.areaChart({ el, data, options });
+        }
+
+        function renderLineChart(chartData, title, target) {
+            target.empty();
+
+            let ctgrArr = new Array();
+            let dataArr = new Array();
+            for(let i=0; i<chartData.length; i++) {
+                ctgrArr.push(chartData[i].date);
+                dataArr.push(chartData[i].portfolio_history);
+            }
+
+            const el = target[0];
+            const data = {
+                categories: ctgrArr,
+                series: [
+                    {
+                        name: 'price',
+                        data: dataArr,
+                    },
+                ],
+            };
+            const options = {
+                chart: { title: title, height: 300 },
+                xAxis: {
+                    title: '일자',
+                },
+                yAxis: {
+                    title: '금액($)',
+                },
+                legend: {visible: false},
+                tooltip: {
+                    formatter: (value) => `$${value}`,
+                },
+            };
+
+            const chart = toastui.Chart.lineChart({ el, data, options });
+        }
+
+        function renderStockColumnChart(chartData, title, target){
+            target.empty();
+
+            let ctgrArr = new Array();
+            let spArr = new Array();
+            let phArr = new Array();
+            for(let i=0; i<chartData.length; i++) {
+                ctgrArr.push(chartData[i].date);
+                spArr.push(chartData[i].stock_price);
+                phArr.push(chartData[i].portfolio_history);
+            }
+
+            const el = target[0];
+            const data = {
+                categories: ctgrArr,
+                series: [
+                    {
+                        name: 'Stock Price',
+                        data: spArr,
+                    },
+                ],
+            };
+            const options = {
+                chart: { title: title, height: 300 },
+                legend: {visible: false},
+            };
+
+            const chart = toastui.Chart.columnChart({ el, data, options });
+        }
+
+        function renderPortfolioColumnChart(chartData, title, target){
+            target.empty();
+
+            let ctgrArr = new Array();
+            let spArr = new Array();
+            let phArr = new Array();
+            for(let i=0; i<chartData.length; i++) {
+                ctgrArr.push(chartData[i].date);
+                spArr.push(chartData[i].stock_price);
+                phArr.push(chartData[i].portfolio_history);
+            }
+
+            const el = target[0];
+            const data = {
+                categories: ctgrArr,
+                series: [
+                    {
+                        name: 'Portfolio History',
+                        data: phArr,
+                    },
+                ],
+            };
+            const options = {
+                chart: { title: title, height: 300 },
+                legend: {visible: false},
+            };
+
+            const chart = toastui.Chart.columnChart({ el, data, options });
+        }
+
+    </script>
+    <style>
+        .modal-lg{max-width: 1500px;}
+    </style>
+</div>
+</html>

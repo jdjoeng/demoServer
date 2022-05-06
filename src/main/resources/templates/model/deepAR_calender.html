@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/defaultLayout}">
+<div layout:fragment="content">
+    <div>
+        <div class="chart-top-desciption">
+            <h4>DeepAR+ Quantile Regression</h4>
+            <ul>
+                <li>DeepAR : 관련 시계열이 포함된 대규모 트레이닝 데이터 세트 여러 개에 걸쳐 시계열의 패턴을 학습하여 정확한 예상 정보를 생성하는 알고리즘입니다.</li>
+                <li>Quantile Regression(분위수 회귀 분석) : 통계학과 계량경제학 분야에서 많이 사용 되는 회귀 분석의 한 유형입니다. 분위수 회귀 분석은 선형 회귀 분석의 조건이 충족되지 않는 경우 사용할 수 있는 선형 회귀 분석의 확장입니다.</li>
+            </ul>
+            <p>
+                <span style="color: orangered">※ 리스트를 클릭하면 상세정보를 확인할수 있습니다.</span>
+            </p>
+        </div>
+        <p style="font-size:20px;">상품별 수요예측</p>
+        <table style="width: 100%;">
+            <tr>
+                <td style="width: 30%">
+                    <div id="grid" style="padding-right: 20px;"></div>
+                </td>
+                <td style="width: 70%">
+                    <div id='calendar'></div>
+                </td>
+            </tr>
+        </table>
+        <br><br>
+
+    </div>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.8.0/locales-all.min.js'></script>
+    <script>
+        const infoType = '1';
+
+        $( document ).ready(function() {
+            ajaxCallGet("/demandForecasting/api/getResultList", {type : infoType}, init);
+        });
+
+        function init(respData) {
+            var gridData = respData.data;
+
+            var grid = new tui.Grid({
+                el: document.getElementById('grid'),
+                data: gridData,
+                scrollX: false,
+                scrollY: true,
+                bodyHeight: 850,
+                minBodyHeight : 20,
+                columns: [
+                    {header: 'id',name: 'id', align: 'center', hidden:true},
+                    {header: '상품명',name: 'name', align: 'center'},
+                ],
+            });
+
+            grid.on('click', function (ev) {
+                let id = grid.getRow(ev.rowKey).id;
+                let param = {id:id, type:infoType};
+                let name = grid.getRow(ev.rowKey).name;
+                ajaxCallGet("/demandForecasting/api/getResultListById", param, function(response, xhr){
+                    renderCalender(response.data);
+                });
+            });
+
+            renderCalender([]);
+        }
+
+        function renderCalender(response) {
+            var now = new Date();
+
+            var year= now.getFullYear();
+            var mon = (now.getMonth()+1)>9 ? ''+(now.getMonth()+1) : '0'+(now.getMonth()+1);
+            var day = now.getDate()>9 ? ''+now.getDate() : '0'+now.getDate();
+
+            var chan_val = year + '-' + mon + '-' + day;
+
+            let event = [];
+            for(let i=0; i<response.length; i++) {
+                let start = response[i].date;
+                if(i == 0) chan_val = start;
+                let objItem = new Object();
+                let objQ90 = new Object();
+                let objQ50 = new Object();
+                let objQ10 = new Object();
+
+                objItem.groupId = 999;
+                objItem.start = start;
+                objItem.title = '[1. 실제판매량] ' + response[i].item_qty;
+                event.push(objItem);
+                objQ90.start = start;
+                objQ90.title = '[2. 최대예측량] ' + (response[i].q90).toFixed(3);
+                event.push(objQ90);
+                objQ50.start = start;
+                objQ50.title = '[3. 중간예측량] ' + (response[i].q50).toFixed(3);
+                event.push(objQ50);
+                objQ10.start = start;
+                objQ10.title = '[4. 최소예측량] ' + (response[i].q10).toFixed(3);
+                event.push(objQ10);
+            }
+
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                expandRows: true, // 화면에 맞게 높이 재설정
+                headerToolbar: {
+                    left: '',
+                    center: 'title',
+                    right: ''
+                },
+                initialView: 'dayGridMonth', // 초기 로드 될때 보이는 캘린더 화면(기본 설정: 달)
+                initialDate: chan_val, // 초기 날짜 설정 (설정하지 않으면 오늘 날짜가 보인다.)
+                locale: 'ko', // 한국어 설정
+                dayMaxEvents: true,
+                events: event,
+            });
+            calendar.render();
+        }
+    </script>
+    <style>
+        #calendar {
+             /* 		float: right; */
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+            background-color: #FFFFFF;
+         }
+
+        /*div.fc-daygrid-day-events .fc-h-event:nth-child(1) { background-color: #93c130; border: 1px solid #93c130 }*/
+        div.fc-daygrid-day-events .fc-daygrid-event-harness:nth-child(1) .fc-h-event{ background-color: #007f5f; border: 1px solid #007f5f }
+
+    </style>
+</div>
+</html>

@@ -1,0 +1,20 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+    <header th:replace="layout/headerLayout :: headerFragment"></header>
+
+    <body class="app header-fixed sidebar-fixed aside-menu-fixed sidebar-lg-show">
+    <th:block th:replace="layout/topLayout :: topFragment"></th:block>
+    <div class="app-body">
+        <th:block th:replace="layout/leftMenuLayout :: leftMenuFragment"></th:block>
+        <main class="main">
+            <!--<th:block th:replace="layout/mainTopNavLayout :: mainTopNavFragment"></th:block>-->
+            <div class="container-fluid" layout:fragment="content"></div>
+        </main>
+    </div>
+    </body>
+
+    <footer th:replace="layout/footerLayout :: footerFragment"></footer>
+    <style>
+        .main .container-fluid{padding: 0px;}
+        .container-fluid{height: 100%;}
+    </style>
+</html>

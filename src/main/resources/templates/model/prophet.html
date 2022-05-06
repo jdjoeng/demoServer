@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/defaultLayout}">
+<div layout:fragment="content">
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-MML-AM_CHTML'></script>
+    <div>
+        <div class="chart-top-desciption">
+            <h4>Prophet</h4>
+            <ul>
+                <li>
+                    Prophet은 Facebook 에서 개발한 시계열 예측 알고리즘으로 완전히 자동화된 시계열 분석은 분석가의 가정이나 경험을 반영하기 어렵다는 문제점과 일반적으로 시계열 분석의 난이도가 높다는 두가지 문제를 해결하기 위한 라이브러리로 정확도가 높고 빠르며 직관적인 파라미터 수정으로 모델 학습이 용이하다는 장점을 갖고 있습니다.
+                </li>
+                <li>
+                    비즈니스 예측 문제는 매우 다양하지만 이중 공통되는 몇 가지 특징을 잡아내며, 모델의 주요 특징 요소는 Trend, Seasonality, Holiday로 이를 공식으로 나타내면 아래와 같습니다.<br>
+                    <div style="margin-left: 20px;">
+                        $$y(t)=g(t) + s(t)+h(t)+\epsilon_i$$<br>
+                        $$g(t)$$ 함수는 Trend로 주기적이지 않은 변화를 나타내며, 부분적으로 선형 또는 logistic 곡선으로 이루어져 있습니다. $$s(t)$$ 함수는 Seasonality 로서 weekly, yearly 등 주기적으로 나타나는 패턴들을 Fourier series를 통해 판별합니다.그리고 $$h(t)$$ 함수는 Holiday로 휴일과 같이 규칙적이지 않은 이벤트들의 영향을 나타냅니다.<br>
+                    </div>
+                </li>
+                <li>
+                    논문에서는 일반적으로 알려진 자동화 시계열 도구들에 비해 성능이 좋은 것으로 나와 있으며, 여러 산업에서 활용되고있는 검증된 알고리즘 입니다.
+                </li>
+            </ul>
+        </div>
+        <div id="grid"></div><br>
+        <div id="chart-area"></div><br>
+        <p id="subGridTitle" style="display:none;font-size:20px;">일자별 수요예측</p>
+        <div id="sub-grid"></div><br>
+    </div>
+    <script>
+        const infoType = '3';
+
+        $( document ).ready(function() {
+            init();
+        });
+
+        function init() {
+            let id = 'FOODS_3_400_TX_2_validation';
+            let name = 'Smiles Cookies';
+            let param = {id:id, type:infoType};
+            ajaxCallGet("/demandForecasting/api/getResultListById", param, function(response, xhr){
+                renderGrid(response.data, name);
+            });
+        }
+
+        function renderChart(gridData, title) {
+
+            $("#chart-area").empty();
+
+            let qtyArr = new Array();
+            let ctgrArr = new Array();
+            let q10Arr = new Array();
+            let q50Arr = new Array();
+            let q90Arr = new Array();
+            for(var i=0; i<gridData.length; i++) {
+                qtyArr.push(gridData[i].item_qty);
+                q10Arr.push(gridData[i].q10);
+                q50Arr.push(gridData[i].q50);
+                q90Arr.push(gridData[i].q90);
+                ctgrArr.push(gridData[i].date);
+            }
+
+            const el = document.getElementById('chart-area');
+            const data = {
+                categories: ctgrArr,
+                series: {
+                    column: [
+                        {
+                            name: '실제 판매량',
+                            data: qtyArr,
+                        },
+                    ],
+                    line: [
+                        {
+                            name: '최대 예측량',
+                            data: q90Arr,
+                        },
+                        {
+                            name: '중간 예측량',
+                            data: q50Arr,
+                        },
+                        {
+                            name: '최소 예측량',
+                            data: q10Arr,
+                        },
+                    ],
+                },
+            };
+            const options = {
+                chart: { title: title, height: 500 },
+                xAxis: { title: '일자' },
+                yAxis: { title: '판매량' },
+                legend: { visible : false },
+            };
+
+            const chart = toastui.Chart.columnLineChart({ el, data, options });
+        }
+
+        function renderGrid(gridData, title) {
+
+            $("#sub-grid").empty();
+            $("#subGridTitle").css("display", "");
+            var grid = new tui.Grid({
+                el: document.getElementById('sub-grid'),
+                data: gridData,
+                scrollX: false,
+                scrollY: true,
+                bodyHeight: 320,
+                minBodyHeight : 20,
+                columns: [
+                    {header: '상품명',name: 'name', align: 'center'},
+                    {header: '일자',name: 'date', align: 'center'},
+                    {header: '실제 판매량',name: 'item_qty', align: 'center'},
+                    {header: '최대 예측량',name: 'q10', align: 'center'},
+                    {header: '중간 예측량',name: 'q50', align: 'center'},
+                    {header: '최소 예측량',name: 'q90', align: 'center'},
+                ],
+            });
+
+            renderChart(gridData, title);
+        }
+    </script>
+    <style>
+        .chart-top-desciption .MJXc-display { display: inline }
+        .chart-top-desciption .MJXc-display { display: inline }
+    </style>
+</div>
+</html>

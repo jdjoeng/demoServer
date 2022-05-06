@@ -1,0 +1,90 @@
+spring:
+  profiles:
+    active: dev
+
+  freemarker.checkTemplateLocation: false
+  devtools:
+    restart:
+      enabled: false
+
+  servlet:
+    multipart:
+      maxFileSize: 10MB
+      maxRequestSize: 10MB
+
+---
+
+spring:
+  profiles: local
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mysql://3.36.24.230:3306/demo
+    username: kafka_center
+    password: ailab1021!
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    show-sql: true
+    properties.hibernate.format_sql: false
+    hibernate:
+      ddl-auto: none
+
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    
+  messages:
+    basename: i18n/exception
+    encoding: UTF-8
+
+  h2:
+    console:
+      enabled: true
+      path: /h2console
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+
+server:
+  retinex: http://localhost:8000/retinex
+  port: 8083
+---
+
+spring:
+  profiles: dev
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mysql://3.36.24.230:3306/demo
+    username: kafka_center
+    password: ailab1021!
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect
+    show-sql: false
+    properties.hibernate.format_sql: false
+    hibernate:
+      ddl-auto: none
+
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    
+  messages:
+    basename: i18n/exception
+    encoding: UTF-8
+
+  h2:
+    console:
+      enabled: true
+      path: /h2console
+
+  thymeleaf:
+    cache: false
+
+logging:
+  level:
+    org.springframework.web: ERROR
+
+server:
+  retinex: http://3.36.24.230:8000/retinex
+  port: 80

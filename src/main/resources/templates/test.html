@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title>Title</title>
+</head>
+<script src="node_modules/jquery/dist/jquery.min.js"></script>
+<body>
+
+	<input type="file" id="imageInput" />
+	<button onclick="upload()">업로드</button>
+	<button onclick="test()">테스트</button>
+	<p>업로드결과:</p>
+	<p id="resultUploadPath"></p>
+
+<script>
+	//var imageInput;
+	function upload() {
+		let imageInput = $("#imageInput")[0];
+		// 파일을 여러개 선택할 수 있으므로 files 라는 객체에 담긴다.
+		//console.log("imageInput: ", imageInput.files)
+
+		if(imageInput.files.length === 0){
+			alert("파일은 선택해주세요");
+			return;
+		}
+
+		const formData = new FormData();
+		formData.append("file", imageInput.files[0]);
+
+		console.log(imageInput.files[0]);
+
+		$.ajax({
+			type:"POST",
+			url: "/retinex/api/getImage",
+			processData: false,
+			contentType: false,
+			crossDomain: true,
+			data: formData,
+			beforeSend : function(xhr){
+			},
+			success: function(rtn){
+				console.log("결과--------");
+				console.log(rtn);
+			},
+			err: function(err){
+				console.log("err:", err)
+			}
+		});
+	}
+
+function test() {
+
+	$.ajax({
+		type:"GET",
+		url: "http://3.36.24.230:8000/",
+		processData: false,
+		contentType: false,
+		crossDomain: true,
+		data: {},
+		beforeSend : function(xhr){
+			xhr.setRequestHeader("Access-Control-Allow-Origin", "*");
+			xhr.setRequestHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE");
+			xhr.setRequestHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+		},
+		success: function(rtn){
+			console.log(rtn);
+		},
+		err: function(err){
+			console.log("err:", err)
+		}
+	});
+}
+
+</script>
+
+</body>
+</html>

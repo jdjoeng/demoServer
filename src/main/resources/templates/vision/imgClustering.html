@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/defaultLayout}">
+<div layout:fragment="content">
+    <div class="chart-top-desciption">
+        <h4>이미지 클러스터링</h4>
+        <ul>
+            <li>아래 결과는 VGG Face Dataset (https://www.robots.ox.ac.uk/~vgg/data/vgg_face/)을 가지고 랜덤 하게 20명을 고른 다음, Inception-ResNet-V2 딥러닝 네트워크로 인공지능이 최대로 이해가 가능한 최종 인코딩 출력물을 그 Pooling 레이어로 정의하고, 그 출력물을 클러스터링한 결과입니다.</li>
+            <li>CCTV 자동 영상 분류 및 GAN에서 Deep Fake 학습시에 학습 데이터 자동 분류, 이미지 데이터 내 중복된 이미지 데이터 검색에 사용될 수 있습니다.</li>
+            <li>Clustering : 주어진 데이터들의 고유 특성을 변경하지 않고 데이터의 특성이 비슷한 집단으로 뭉쳐서 분류하는 데이터 마이닝의 한 방법입니다.</li>
+        </ul>
+    </div>
+    <table style="text-align: center; width: 100%; font-size: 20px;">
+        <thead>
+            <tr>
+                <th>대상이미지</th>
+                <th>클러스터링 결과</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="width: 50%">
+                    <a href="/img/data/imgclu_left.png">
+                        <img id="orgImg" src="/img/data/imgclu_left.png" style="width: 97%;">
+                    </a>
+                </td>
+                <td style="width: 50%">
+                    <a href="/img/data/tsne_train_image_rapids_good.jpeg">
+                        <img id="newImg" src="/img/data/tsne_train_image_rapids_good.jpeg" style="width: 99%;">
+                    </a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <script>
+    </script>
+</div>
+</html>

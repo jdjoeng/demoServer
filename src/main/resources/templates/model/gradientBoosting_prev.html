@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/defaultLayout}">
+<div layout:fragment="content">
+    <div>
+        <div class="chart-top-desciption">
+            <h4>Gradient Boosting</h4>
+            <ul>
+                <li>Gradient Boosting : 회귀분석 또는 분류 분석을 수행할 수 있는 예측모형이며 예측모형의 앙상블 방법론 중 부스팅 계열에 속하는 알고리즘입니다. Gradient Boosting Algorithm은 Tabular format 데이터 (엑셀형태와 같이 X-Y Grid로 되어있는 데이터)에 대한 예측에서 엄청난 성능을 보여주고, 머신러닝 알고리즘 중에서도 가장 예측 성능이 높다고 알려진 알고리즘입니다.</li>
+            </ul>
+        </div>
+        <p style="font-size:20px;">상품별 수요예측</p>
+        <div id="grid"></div><br>
+        <div id="chart-area"></div><br>
+        <p id="subGridTitle" style="display:none;font-size:20px;">일자별 수요예측</p>
+        <div id="sub-grid"></div><br>
+    </div>
+    <script>
+        const infoType = '2';
+
+        $( document ).ready(function() {
+            ajaxCallGet("/demandForecasting/api/getResultList", {type : infoType}, init);
+        });
+
+        function init(respData) {
+            var gridData = respData.data;
+
+            var grid = new tui.Grid({
+                el: document.getElementById('grid'),
+                data: gridData,
+                scrollX: false,
+                scrollY: true,
+                bodyHeight: 320,
+                minBodyHeight : 20,
+                columns: [
+                    {header: 'id',name: 'id', align: 'center', hidden:true},
+                    {header: '상품명',name: 'name', align: 'center'},
+                    {header: '실제 판매량',name: 'item_qty', align: 'center'},
+                    {header: 'Q0.05',name: 'q10', align: 'center'},
+                    {header: 'Q0.5',name: 'q50', align: 'center'},
+                    {header: 'Q0.95',name: 'q90', align: 'center'},
+                ],
+            });
+
+            grid.on('click', function (ev) {
+                let id = grid.getRow(ev.rowKey).id;
+                let name = grid.getRow(ev.rowKey).name;
+                let param = {id:id, type:infoType};
+                //console.log(param);
+                /*Ustra.get("/bbs/reportreqest/getAlsRstInfo", param, function (response, xhr) {
+                    renderGrid(response.data, id);
+                });*/
+                ajaxCallGet("/demandForecasting/api/getResultListById", param, function(response, xhr){
+                    renderGrid(response.data, name);
+                });
+            });
+
+            renderChart(gridData, 'ALL_FOODS');
+        }
+
+        function renderChart(gridData, title) {
+
+            $("#chart-area").empty();
+
+            let qtyArr = new Array();
+            let q10Arr = new Array();
+            let q50Arr = new Array();
+            let q90Arr = new Array();
+            for(var i=0; i<gridData.length; i++) {
+                var qtyObj = new Object();
+                var q10Obj = new Object();
+                var q50Obj = new Object();
+                var q90Obj = new Object();
+
+                qtyObj.x = i+1;
+                q10Obj.x = i+1;
+                q50Obj.x = i+1;
+                q90Obj.x = i+1;
+
+                qtyObj.y = parseFloat(gridData[i].item_qty);
+                q10Obj.y = parseFloat(gridData[i].q10);
+                q50Obj.y = parseFloat(gridData[i].q50);
+                q90Obj.y = parseFloat(gridData[i].q90);
+
+                qtyArr.push(qtyObj);
+                q10Arr.push(q10Obj);
+                q50Arr.push(q50Obj);
+                q90Arr.push(q90Obj);
+            }
+
+            const el = document.getElementById('chart-area');
+            const data = {
+                series: {
+                    scatter: [
+                        {
+                            name: '실제 판매량',
+                            data: qtyArr,
+                        },
+                    ],
+                    line: [
+                        {
+                            name: 'Q0.95',
+                            data: q90Arr,
+                        },
+                        {
+                            name: 'Q0.5',
+                            data: q50Arr,
+                        },
+                        {
+                            name: 'Q0.05',
+                            data: q10Arr,
+                        },
+                    ],
+                },
+            };
+            const options = {
+                chart: { title: title, height: 500 },
+                xAxis: { title: '일자' },
+                yAxis: { title: '판매량' },
+                legend: { visible : false },
+            };
+
+            const chart = toastui.Chart.lineScatterChart({ el, data, options });
+        }
+
+        function renderGrid(gridData, title) {
+
+            $("#sub-grid").empty();
+            $("#subGridTitle").css("display", "");
+            var grid = new tui.Grid({
+                el: document.getElementById('sub-grid'),
+                data: gridData,
+                scrollX: false,
+                scrollY: true,
+                bodyHeight: 320,
+                minBodyHeight : 20,
+                columns: [
+                    {header: '상품명',name: 'name', align: 'center'},
+                    {header: '일자',name: 'date', align: 'center'},
+                    {header: '실제 판매량',name: 'item_qty', align: 'center'},
+                    {header: 'Q0.05',name: 'q10', align: 'center'},
+                    {header: 'Q0.5',name: 'q50', align: 'center'},
+                    {header: 'Q0.95',name: 'q90', align: 'center'},
+                ],
+            });
+
+            renderChart(gridData, title);
+        }
+    </script>
+</div>
+</html>

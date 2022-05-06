@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/defaultLayout}">
+<div layout:fragment="content">
+    <div class="chart-top-desciption">
+        <h4>Retinex</h4>
+        <ul>
+            <li>Retinex : DSLR의 Auto Exposure Lock (AEL) 기능을 소프트웨어로 구현한 알고리즘으로, 영상이나 이미지의 색채정보를 보존하면서 명암대비를 향상시켜 선명도를 증가시킵니다.</li>
+        </ul>
+    </div>
+    <div class="file-upload" style="margin-bottom: 20px;">
+        <div class="image-upload-wrap">
+            <input id="imageInput" class="file-upload-input" type='file' onchange="readURL(this);" accept="image/*" />
+            <div class="drag-text">
+                <h3>Drag and drop a file or select add Image</h3>
+            </div>
+        </div>
+        <div class="file-upload-content">
+            <img class="file-upload-image" src="#" alt="your image" />
+        </div><br>
+        <button class="file-upload-btn" type="button" onclick="$('.file-upload-input').trigger( 'click' )">Add Image</button>
+    </div>
+    <div style="text-align: center;">
+        <img id="orgImg" src="" style="width: 600px;">
+        <img id="newImg" src="" style="width: 600px;">
+    </div>
+    <script>
+        function readURL(input) {
+            if (input.files && input.files[0]) {
+
+                var reader = new FileReader();
+
+                reader.onload = function(e) {
+                    $('.image-upload-wrap').hide();
+
+                    $('.file-upload-image').attr('src', e.target.result);
+                    $('.file-upload-content').show();
+
+                    $('.image-title').html(input.files[0].name);
+                };
+
+                reader.readAsDataURL(input.files[0]);
+
+                upload(input.files[0]);
+
+            } else {
+                removeUpload();
+            }
+        }
+
+        function removeUpload() {
+            $('.file-upload-input').replaceWith($('.file-upload-input').clone());
+            $('.file-upload-content').hide();
+            $('.image-upload-wrap').show();
+        }
+        $('.image-upload-wrap').bind('dragover', function () {
+            $('.image-upload-wrap').addClass('image-dropping');
+        });
+        $('.image-upload-wrap').bind('dragleave', function () {
+            $('.image-upload-wrap').removeClass('image-dropping');
+        });
+
+        function upload(input) {
+
+            const formData = new FormData();
+            formData.append("file", input);
+
+            ajaxCallFilePost('/retinex/api/getImage', formData, function (response, xhr){
+                //console.log(response);
+                $('#orgImg').attr('src', (response.orgImgName).replace('..', ''));
+                $('#newImg').attr('src', (response.newImgName).replace('..', ''));
+            });
+        }
+    </script>
+</div>
+</html>

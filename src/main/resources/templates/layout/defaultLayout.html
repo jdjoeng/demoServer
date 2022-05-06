@@ -1,0 +1,24 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+    <header th:replace="layout/headerLayout :: headerFragment"></header>
+
+    <body class="app header-fixed sidebar-fixed aside-menu-fixed sidebar-lg-show">
+    <th:block th:replace="layout/topLayout :: topFragment"></th:block>
+    <div class="app-body">
+        <th:block th:replace="layout/leftMenuLayout :: leftMenuFragment"></th:block>
+        <main class="main">
+            <!--<th:block th:replace="layout/mainTopNavLayout :: mainTopNavFragment"></th:block>-->
+            <div class="container-fluid" layout:fragment="content" style="padding-top: 30px;"></div>
+        </main>
+    </div>
+    <div class="text-center">
+        <div class="spinner-border text-info position-absolute top-50 start-50" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    </body>
+
+    <footer th:replace="layout/footerLayout :: footerFragment"></footer>
+    <style>
+        .chart-top-desciption{ background-color: white; padding: 20px 20px 5px 20px; margin-bottom: 20px; }
+    </style>
+</html>
